@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Zerofy Fractional Carbon Credits</title>
+</head>
+<body>
+  <h2>Zerofy Testnet Interface (Polygon Amoy)</h2>
+
+  <button onclick="connectWallet()">🔗 Connect Wallet</button>
+  <p id="walletAddress">Not connected</p>
+  <p id="balance">Balance: -</p>
+  <p id="status"></p>
+
+  <hr>
+
+  <label for="projectSelect">Select Carbon Credit Project:</label><br>
+  <select id="projectSelect"></select><br><br>
+
+  <!-- Metadata display area -->
+  <div id="metadataDisplay" style="border: 1px solid #ccc; padding: 10px; margin-bottom: 20px;">
+    <h3>Token Metadata</h3>
+    <img id="tokenImage" src="" alt="Token image" style="max-width: 200px; display: none;">
+    <p id="tokenName"></p>
+    <p id="tokenDescription"></p>
+    <ul id="tokenAttributes"></ul>
+  </div>
+
+  <label for="mintAmount">Amount to Mint (€):</label><br>
+  <input type="number" id="mintAmount" min="1" value="1"><br><br>
+
+  <button onclick="mint()">✅ Mint ZFYC</button><br><br>
+
+  <label for="retireAmount">Amount to Retire (€):</label><br>
+  <input type="number" id="retireAmount" min="1" value="1"><br><br>
+
+  <button onclick="retire()">🔥 Retire ZFYC</button><br><br>
+  <div id="retireReceipt" style="border: 1px solid #4caf50; padding: 10px; margin-top: 10px; color: #2e7d32; display: none;">
+    <h4>Retirement Receipt</h4>
+    <p id="receiptContent"></p>
+    </div>
+
+    <h3>Donate ZFYC Tokens</h3>
+
+    <div style="margin-bottom: 15px;">
+    <p><b>Donate to Healthy Austrian Tree Association</b> (ZFR Number: 0123456789)</p>
+    <input type="number" id="donateAmount1" min="1" value="1" />
+    <button onclick="donateToNGO('0x6106426AD71a7AB01F9883203995192CC82314dE', 'donateAmount1')">Donate to Healthy Austrian Tree Association</button>
+    </div>
+
+    <div style="margin-bottom: 15px;">
+    <p><b>Donate to Austrian Wildlife Protection Fund</b> (ZFR Number: 9876543210)</p>
+    <input type="number" id="donateAmount2" min="1" value="1" />
+    <button onclick="donateToNGO('0x6106426AD71a7AB01F9883203995192CC82314dE', 'donateAmount2')">Donate to Austrian Wildlife Protection Fund</button>
+    </div>
+
+    <div id="donationReceipt" style="border: 1px solid #2196F3; padding: 10px; margin-top: 10px; color: #0D47A1; display: none;">
+        <h4>Donation Receipt</h4>
+        <p id="donationReceiptContent"></p>
+    </div>
+
+  <!-- Ethers.js -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
+  <script>
+    // Mock carbon credit projects database
+    const carbonCredits = [
+      { id: 0, name: "Amazon Rainforest", description: "Protecting Amazon basin biodiversity", availableAmount: 10000 },
+      { id: 1, name: "Kenya Wind Farm", description: "Wind energy in Kenya", availableAmount: 5000 },
+      { id: 2, name: "Indian Solar Power", description: "Large-scale solar plant", availableAmount: 7500 },
+      { id: 3, name: "Canadian Forest Conservation", description: "Sustainable forest management", availableAmount: 6000 }
+    ];
+
+    // Local inline metadata for tokens
+    const localMetadata = {
+      0: {
+        name: "Amazon Rainforest",
+        description: "Protecting Amazon basin biodiversity",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Amazon_Rainforest.JPG/320px-Amazon_Rainforest.JPG",
+        attributes: [
+          { trait_type: "Location", value: "Brazil" },
+          { trait_type: "Vintage", value: "2023" }
+        ]
+      },
+      1: {
+        name: "Kenya Wind Farm",
+        description: "Wind energy in Kenya",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/Ngong_hills_wind_farm_view_from_4_Kenya.JPG/320px-Ngong_hills_wind_farm_view_from_4_Kenya.JPG",
+        attributes: [
+          { trait_type: "Location", value: "Kenya" },
+          { trait_type: "Vintage", value: "2022" }
+        ]
+      },
+      2: {
+        name: "Indian Solar Power",
+        description: "Large-scale solar plant",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/Solar_power_plant_Nepal_001.JPG/320px-Solar_power_plant_Nepal_001.JPG",
+        attributes: [
+          { trait_type: "Location", value: "India" },
+          { trait_type: "Vintage", value: "2021" }
+        ]
+      },
+      3: {
+        name: "Canadian Forest Conservation",
+        description: "Sustainable forest management",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Great_Lakes_Forest_-_panoramio_%2812%29.jpg/320px-Great_Lakes_Forest_-_panoramio_%2812%29.jpg",
+        attributes: [
+          { trait_type: "Location", value: "Canada" },
+          { trait_type: "Vintage", value: "2020" }
+        ]
+      }
+    };
+
+    const ngos = {
+    "0x6106426AD71a7AB01F9883203995192CC82314dE": "Healthy Austrian Tree Association",
+    "0xAnotherNGOAddressHere": "Austrian Wildlife Protection Fund"
+    };
+
+    const CONTRACT_ADDRESS = "0xEae1a035CF7c454180B9363125bf41d826Fc0CaB";
+    const ABI = [
+      "function mint(address to, uint256 tokenId, uint256 amount) public",
+      "function retire(uint256 tokenId, uint256 amount) public",
+      "function donate(uint256 tokenId, uint256 amount, address ngo) public",
+      "function balanceOf(address owner, uint256 tokenId) view returns (uint256)"
+    ];
+
+    let signer;
+    let contract;
+
+    async function connectWallet() {
+      if (!window.ethereum) return alert("Please install MetaMask");
+
+      const provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+      await provider.send("eth_requestAccounts", []);
+      signer = provider.getSigner();
+      const address = await signer.getAddress();
+      document.getElementById("walletAddress").innerText = "Connected: " + address;
+      contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+      populateProjectDropdown();
+      updateBalance();
+      setStatus("");
+
+      // Show metadata for the first token initially
+      if (carbonCredits.length > 0) {
+        fetchAndDisplayMetadata(carbonCredits[0].id);
+      }
+    }
+
+    function populateProjectDropdown() {
+      const select = document.getElementById("projectSelect");
+      select.innerHTML = "";
+
+      carbonCredits.forEach(project => {
+        const option = document.createElement("option");
+        option.value = project.id;
+        option.text = `${project.name} (Available: ${project.availableAmount})`;
+        select.appendChild(option);
+      });
+
+      select.addEventListener("change", (e) => {
+        const tokenId = parseInt(e.target.value);
+        fetchAndDisplayMetadata(tokenId);
+      });
+    }
+
+    function fetchAndDisplayMetadata(tokenId) {
+      const metadata = localMetadata[tokenId];
+      if (!metadata) return;
+
+      const img = document.getElementById("tokenImage");
+      const name = document.getElementById("tokenName");
+      const desc = document.getElementById("tokenDescription");
+      const attrList = document.getElementById("tokenAttributes");
+
+      if (metadata.image) {
+        img.src = metadata.image;
+        img.style.display = "block";
+      } else {
+        img.style.display = "none";
+      }
+
+      name.textContent = metadata.name || "";
+      desc.textContent = metadata.description || "";
+
+      attrList.innerHTML = "";
+      if (metadata.attributes && Array.isArray(metadata.attributes)) {
+        metadata.attributes.forEach(attr => {
+          const li = document.createElement("li");
+          li.textContent = `${attr.trait_type}: ${attr.value}`;
+          attrList.appendChild(li);
+        });
+      }
+    }
+
+    async function updateBalance() {
+      try {
+        const address = await signer.getAddress();
+        let balanceText = "Balances:\n";
+
+        for (const project of carbonCredits) {
+          const bal = await contract.balanceOf(address, project.id);
+          balanceText += `${project.name}: ${bal.toString()} tokens\n`;
+        }
+
+        document.getElementById("balance").innerText = balanceText;
+      } catch (err) {
+        setStatus("Failed to fetch balance: " + err.message);
+      }
+    }
+
+    function setStatus(msg) {
+      document.getElementById("status").innerText = msg;
+    }
+
+    async function mint() {
+      const tokenId = parseInt(document.getElementById("projectSelect").value);
+      const amount = parseInt(document.getElementById("mintAmount").value);
+
+      if (!amount || amount <= 0) return alert("Enter a valid mint amount.");
+
+      const project = carbonCredits.find(p => p.id === tokenId);
+      if (!project) return alert("Invalid project selected.");
+
+      if (amount > project.availableAmount) {
+        return alert("Amount exceeds available tokens.");
+      }
+
+      try {
+        setStatus("Minting...");
+        const tx = await contract.mint(await signer.getAddress(), tokenId, amount);
+        await tx.wait();
+        setStatus(`Minted ${amount} tokens of ${project.name}`);
+
+        project.availableAmount -= amount;
+        populateProjectDropdown();
+        updateBalance();
+      } catch (err) {
+        setStatus("Mint failed: " + err.message);
+      }
+    }
+
+    async function retire() {
+    const tokenId = parseInt(document.getElementById("projectSelect").value);
+    const amount = parseInt(document.getElementById("retireAmount").value);
+
+    if (!amount || amount <= 0) return alert("Enter a valid retire amount.");
+
+    try {
+        setStatus("Retiring...");
+        const tx = await contract.retire(tokenId, amount);
+        const receipt = await tx.wait();  // Wait for confirmation
+
+        setStatus(`Retired ${amount} tokens.`);
+
+        updateBalance();
+
+        const txHash = receipt.transactionHash;
+        const project = carbonCredits.find(p => p.id === tokenId);
+        const date = new Date().toLocaleString();
+
+        const receiptText = `
+        Successfully retired ${amount} token(s) from project "<b>${project.name}</b>".<br>
+        Converted to ${amount} carbon offsets.<br>
+        Date: ${date}<br>
+        Transaction ID: <a href="https://amoy.polygonscan.com/tx/${txHash}" target="_blank" rel="noopener noreferrer">${txHash}</a>
+        `;
+        document.getElementById("receiptContent").innerHTML = receiptText;
+        document.getElementById("retireReceipt").style.display = "block";
+    } catch (err) {
+        setStatus("Retire failed: " + err.message);
+        document.getElementById("retireReceipt").style.display = "none";
+    }
+    }
+
+    async function donateToNGO(ngoAddress, amountInputId) {
+    const tokenId = parseInt(document.getElementById("projectSelect").value);
+    const amount = parseInt(document.getElementById(amountInputId).value);
+
+    if (!amount || amount <= 0) {
+        return alert("Enter a valid donation amount.");
+    }
+
+    if (!ethers.utils.isAddress(ngoAddress)) {
+        return alert("Invalid NGO wallet address.");
+    }
+
+    try {
+        setStatus(`Donating ${amount} tokens to ${ngoAddress}...`);
+        const tx = await contract.donate(tokenId, amount, ngoAddress);
+        const receipt = await tx.wait(); // wait for confirmation
+
+        setStatus(`Donated ${amount} tokens to ${ngoAddress}`);
+
+        updateBalance();
+
+        // Show receipt with transaction hash & details
+        const signerAddress = await signer.getAddress();
+        const date = new Date().toLocaleString();
+        const txHash = receipt.transactionHash;
+
+        const ngoName = ngos[ngoAddress] || "Unknown NGO";
+
+        const receiptHTML = `
+        Successfully donated <b>${amount}</b> token(s) from project ID <b>${tokenId}</b>.<br>
+        Donor: <b>${signerAddress}</b><br>
+        Recipient NGO: <b>${ngoName}</b> (${ngoAddress})<br>
+        Date: ${date}<br>
+        Transaction ID: <a href="https://amoy.polygonscan.com/tx/${txHash}" target="_blank" rel="noopener noreferrer">${txHash}</a>
+        `;
+        document.getElementById("donationReceiptContent").innerHTML = receiptHTML;
+        document.getElementById("donationReceipt").style.display = "block";
+
+    } catch (err) {
+        setStatus("Donation failed: " + err.message);
+        document.getElementById("donationReceipt").style.display = "none";
+    }
+    }
+  </script>
+</body>
+</html>
