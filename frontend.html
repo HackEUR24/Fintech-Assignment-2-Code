@@ -44,13 +44,13 @@
     <div style="margin-bottom: 15px;">
     <p><b>Donate to Healthy Austrian Tree Association</b> (ZFR Number: 0123456789)</p>
     <input type="number" id="donateAmount1" min="1" value="1" />
-    <button onclick="donateToNGO('0x6106426AD71a7AB01F9883203995192CC82314dE', 'donateAmount1')">Donate to Healthy Austrian Tree Association</button>
+    <button onclick="donateToNGO('insert ngo recipient key', 'donateAmount1')">Donate to Healthy Austrian Tree Association</button>
     </div>
 
     <div style="margin-bottom: 15px;">
     <p><b>Donate to Austrian Wildlife Protection Fund</b> (ZFR Number: 9876543210)</p>
     <input type="number" id="donateAmount2" min="1" value="1" />
-    <button onclick="donateToNGO('0x6106426AD71a7AB01F9883203995192CC82314dE', 'donateAmount2')">Donate to Austrian Wildlife Protection Fund</button>
+    <button onclick="donateToNGO('insert ngo recipient key', 'donateAmount2')">Donate to Austrian Wildlife Protection Fund</button>
     </div>
 
     <div id="donationReceipt" style="border: 1px solid #2196F3; padding: 10px; margin-top: 10px; color: #0D47A1; display: none;">
@@ -75,7 +75,7 @@
       0: {
         name: "Amazon Rainforest",
         description: "Protecting Amazon basin biodiversity",
-        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Amazon_Rainforest.JPG/320px-Amazon_Rainforest.JPG",
+        image: "",
         attributes: [
           { trait_type: "Location", value: "Brazil" },
           { trait_type: "Vintage", value: "2023" }
@@ -84,7 +84,7 @@
       1: {
         name: "Kenya Wind Farm",
         description: "Wind energy in Kenya",
-        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/Ngong_hills_wind_farm_view_from_4_Kenya.JPG/320px-Ngong_hills_wind_farm_view_from_4_Kenya.JPG",
+        image: "",
         attributes: [
           { trait_type: "Location", value: "Kenya" },
           { trait_type: "Vintage", value: "2022" }
@@ -93,7 +93,7 @@
       2: {
         name: "Indian Solar Power",
         description: "Large-scale solar plant",
-        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/Solar_power_plant_Nepal_001.JPG/320px-Solar_power_plant_Nepal_001.JPG",
+        image: "",
         attributes: [
           { trait_type: "Location", value: "India" },
           { trait_type: "Vintage", value: "2021" }
@@ -102,7 +102,7 @@
       3: {
         name: "Canadian Forest Conservation",
         description: "Sustainable forest management",
-        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Great_Lakes_Forest_-_panoramio_%2812%29.jpg/320px-Great_Lakes_Forest_-_panoramio_%2812%29.jpg",
+        image: "",
         attributes: [
           { trait_type: "Location", value: "Canada" },
           { trait_type: "Vintage", value: "2020" }
@@ -111,11 +111,11 @@
     };
 
     const ngos = {
-    "0x6106426AD71a7AB01F9883203995192CC82314dE": "Healthy Austrian Tree Association",
-    "0xAnotherNGOAddressHere": "Austrian Wildlife Protection Fund"
+    "insert ngo address here": "Healthy Austrian Tree Association",
+    "insert ngo address here": "Austrian Wildlife Protection Fund"
     };
 
-    const CONTRACT_ADDRESS = "0xEae1a035CF7c454180B9363125bf41d826Fc0CaB";
+    const CONTRACT_ADDRESS = "insert address here";
     const ABI = [
       "function mint(address to, uint256 tokenId, uint256 amount) public",
       "function retire(uint256 tokenId, uint256 amount) public",
